@@ -1,7 +1,7 @@
 // Service worker: permite abrir o app sem sinal.
 // Ao publicar uma nova versão, aumente VERSAO para os celulares baixarem os arquivos novos.
-const VERSAO = 'tmv-v3';
-const ARQUIVOS = ['./', './index.html', './config.js', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
+const VERSAO = 'tmv-v4';
+const ARQUIVOS = ['./', './index.html', './config.js', './manifest.json', './icons/icon-192.png', './icons/icon-512.png', './icons/logo.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSAO).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));

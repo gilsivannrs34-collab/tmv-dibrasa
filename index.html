@@ -83,6 +83,12 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 .vazio{color:var(--mut);font-size:15px}
 .menu-item{display:block;width:100%;text-align:left;background:var(--card);border-radius:12px;padding:16px;margin-top:8px;font-size:16px}
 .mut{color:var(--mut);font-size:13px}
+.boas{text-align:center;padding:22px 8px 0}
+.boas img{width:136px;height:136px;border-radius:50%;object-fit:cover;background:#fff;border:3px solid var(--ouro)}
+.boas .tit{font-size:24px;font-weight:800;margin-top:12px}
+.boas .tit b{color:var(--ouro)}
+.boas .fil{color:var(--ouro2);font-weight:700;font-size:15px;letter-spacing:.4px;margin-top:4px}
+.boas p{color:var(--mut);font-size:15px;margin:12px auto 0;max-width:340px}
 </style>
 </head>
 <body>
@@ -100,7 +106,7 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 <script src="config.js"></script>
 <script>
 'use strict';
-var APP_VERSAO = '1.0.2';
+var APP_VERSAO = '1.0.3';
 var CFG = window.TMV_CONFIG || {};
 var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
 var JANELA_DESFAZER_MIN = 15;
@@ -261,7 +267,11 @@ function render() {
 
 function telaPerfil() {
   var lista = cad.motoristas || [];
-  var h = '<h2>Quem é você?</h2>';
+  var filial = CFG.FILIAL || cad.filial || '';
+  var h = '<div class="boas"><img src="icons/logo.png" alt="Cervejaria Ambev Dibrasa"><div class="tit"><b>TMV</b> · Tempo de Viagem</div>' +
+          (filial ? '<div class="fil">' + esc(filial) + '</div>' : '') +
+          '<p>Registre cada etapa da viagem até a cervejaria com um toque. É para medir os tempos e reduzir a espera, não para vigiar ninguém.</p></div>';
+  h += '<h2>Quem é você?</h2><div class="mut">Toque no seu nome. É só desta vez: depois o celular lembra.</div>';
   if (lista.length) {
     h += '<div class="lista-btn">' + lista.map(function (m) { return '<button data-acao="perfil" data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div>';
   } else {
