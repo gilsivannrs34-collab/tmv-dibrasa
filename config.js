@@ -3,13 +3,13 @@
 // ============================================================
 window.TMV_CONFIG = {
   // URL do App da Web do Apps Script (termina em /exec)
-  ENDPOINT: 'COLE_AQUI_A_URL_DO_APPS_SCRIPT',
+  ENDPOINT: 'https://script.google.com/macros/s/AKfycbzI7YSlZz9L3AETIIbwkqZ2cSQA6OGk2aF35nMqoUVOP58vSJFXpjY4mW6VMTtYZN9C5w/exec',
 
   // Mesma APP_KEY da aba Config da planilha
-  APP_KEY: 'COLE_AQUI_A_APP_KEY',
+  APP_KEY: '8e4f8e5888df45ca',
 
   // Nome da filial do piloto (aparece em cada evento)
-  FILIAL: 'EDITAR',
+  FILIAL: 'AMBEV DIBRASA SANTA INÊS',
 
   // Capturar GPS em cada toque (o celular pede permissão uma vez)
   GPS: true,

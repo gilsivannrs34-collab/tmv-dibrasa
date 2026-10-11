@@ -100,7 +100,7 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 <script src="config.js"></script>
 <script>
 'use strict';
-var APP_VERSAO = '1.0.0';
+var APP_VERSAO = '1.0.1';
 var CFG = window.TMV_CONFIG || {};
 var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
 var JANELA_DESFAZER_MIN = 15;
@@ -382,7 +382,7 @@ function folhaPasso(evento) {
   var h = '<h3>' + p.nome + '</h3><div class="hora"></div><div class="mut">Horário registrado ao tocar em Confirmar</div>';
   if (evento === 'SAIDA_REVENDA') {
     h += campoLista('fFabrica', 'Cervejaria de destino', cad.fabricas, perfil.ultimaFabrica);
-    h += campoLista('fPlaca', 'Placa do veículo', cad.placas, perfil.ultimaPlaca);
+    h += campoLista('fPlaca', 'Placa do veículo', cad.placas, ''); // sem motorista fixo por placa: escolher a cada saída
   }
   if (evento === 'SAIDA_FABRICA') {
     h += '<label for="fPedido">Número do pedido carregado</label><input id="fPedido" inputmode="numeric" autocomplete="off">';
@@ -407,7 +407,7 @@ function folhaPasso(evento) {
       if (evento === 'SAIDA_REVENDA') {
         var fab = $('fFabrica').value.trim(), placa = $('fPlaca').value.trim().toUpperCase();
         viagem = { id: uuid(), fabrica: fab, placa: placa, eventos: [] };
-        perfil.ultimaFabrica = fab; perfil.ultimaPlaca = placa; gravar('tmv_perfil', perfil);
+        perfil.ultimaFabrica = fab; gravar('tmv_perfil', perfil);
       }
       if (evento === 'SAIDA_FABRICA') { extra.pedido = $('fPedido').value.trim(); extra.nf = $('fNf').value.trim(); }
       await registrar(evento, extra, ts);
