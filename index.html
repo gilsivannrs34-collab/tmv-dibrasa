@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1d3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>TMV Dibrasa</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#0b1d3a;--bg2:#12284f;--card:#173263;--line:#2a4579;
+  --ouro:#f2b632;--ouro2:#ffd36b;--txt:#f3f6fb;--mut:#a9b8d4;
+  --ok:#2fbf71;--alerta:#ff8a3d;--erro:#ff5a5a;--azul:#4da3ff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px 32px}
+header{display:flex;align-items:center;gap:10px;padding:14px 16px;background:var(--bg2);border-bottom:2px solid var(--ouro);position:sticky;top:0;z-index:5}
+header .marca{font-weight:800;letter-spacing:.5px;color:var(--ouro)}
+header .quem{flex:1;font-size:14px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sync{font-size:12px;font-weight:700;padding:5px 9px;border-radius:999px;background:#1e3a6b;white-space:nowrap}
+.sync.ok{background:rgba(47,191,113,.18);color:var(--ok)}
+.sync.pend{background:rgba(255,138,61,.18);color:var(--alerta)}
+.sync.err{background:rgba(255,90,90,.2);color:var(--erro)}
+.icone{background:transparent;font-size:22px;padding:4px 6px;color:var(--mut)}
+.banner{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:rgba(255,90,90,.15);color:#ffc2c2;font-size:14px}
+h2{font-size:15px;color:var(--mut);font-weight:600;margin:22px 0 10px;text-transform:uppercase;letter-spacing:.6px}
+.card{background:var(--card);border-radius:14px;padding:14px;margin-top:12px}
+.resumo{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--mut)}
+.resumo b{display:block;color:var(--txt);font-size:16px}
+.relogio{font-size:13px;color:var(--mut);margin-top:8px}
+.relogio b{color:var(--ouro2);font-size:20px}
+.btn{display:block;width:100%;min-height:76px;border-radius:16px;font-size:20px;font-weight:800;margin-top:14px;padding:14px;text-align:center}
+.btn small{display:block;font-size:13px;font-weight:600;opacity:.8;margin-top:2px}
+.btn-pri{background:var(--ouro);color:#1b1300;box-shadow:0 6px 0 #b9831a}
+.btn-pri:active{transform:translateY(3px);box-shadow:0 3px 0 #b9831a}
+.btn-sec{background:#20407a;color:var(--txt);min-height:60px;font-size:18px}
+.btn-parada{background:var(--alerta);color:#2a1100;box-shadow:0 6px 0 #b85a1d}
+.btn-link{background:transparent;color:var(--mut);text-decoration:underline;font-size:15px;margin:18px auto 0;display:block;padding:8px}
+.btn:disabled{opacity:.45}
+.parada-ativa{background:rgba(255,138,61,.15);border:2px solid var(--alerta);border-radius:14px;padding:14px;margin-top:14px;text-align:center}
+.parada-ativa .t{font-size:13px;color:var(--alerta);font-weight:800;letter-spacing:.6px}
+.parada-ativa .n{font-size:20px;font-weight:800;margin-top:4px}
+.parada-ativa .d{font-size:30px;font-weight:800;color:var(--ouro2);margin-top:4px}
+ol.linha{list-style:none;margin:0;padding:0}
+ol.linha li{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+ol.linha li:last-child{border-bottom:0}
+.pt{width:14px;height:14px;border-radius:50%;margin-top:4px;flex:none;border:2px solid var(--line)}
+li.feito .pt{background:var(--ok);border-color:var(--ok)}
+li.agora .pt{background:var(--ouro);border-color:var(--ouro)}
+li.par .pt{background:var(--alerta);border-color:var(--alerta);width:10px;height:10px;margin:6px 2px 0}
+ol.linha .nm{flex:1}
+ol.linha .hr{font-variant-numeric:tabular-nums;color:var(--mut);font-size:15px}
+li.feito .hr{color:var(--txt);font-weight:700}
+li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
+.lista-btn button{display:block;width:100%;text-align:left;background:var(--card);border-radius:12px;padding:16px;margin-top:8px;font-size:17px;font-weight:600}
+.lista-btn button.sel{outline:3px solid var(--ouro)}
+/* folha de confirmação */
+.veu{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.veu.on{display:flex}
+.folha{background:var(--bg2);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92dvh;overflow:auto}
+.folha h3{margin:0;font-size:20px}
+.folha .hora{font-size:44px;font-weight:800;color:var(--ouro);font-variant-numeric:tabular-nums;margin:6px 0 4px}
+.folha label{display:block;font-size:14px;color:var(--mut);margin:14px 0 6px}
+.folha select,.folha input{width:100%;font:inherit;font-size:19px;padding:14px;border-radius:12px;border:2px solid var(--line);background:var(--bg);color:var(--txt)}
+.folha input:focus,.folha select:focus{outline:none;border-color:var(--ouro)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{background:var(--card);padding:12px 14px;border-radius:999px;font-size:15px;font-weight:600}
+.chips button.sel{background:var(--ouro);color:#1b1300}
+.erro-campo{color:var(--erro);font-size:14px;margin-top:8px;min-height:18px}
+.acoes{display:flex;gap:10px;margin-top:16px}
+.acoes .btn{margin-top:0}
+.acoes .btn-sec{flex:0 0 36%}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0e2246;border:1px solid var(--ouro);color:var(--txt);padding:12px 16px;border-radius:12px;z-index:30;font-size:15px;display:none;max-width:90vw}
+.toast.on{display:block}
+.fim{text-align:center}
+.fim .grande{font-size:48px;font-weight:800;color:var(--ouro);margin:4px 0}
+.vazio{color:var(--mut);font-size:15px}
+.menu-item{display:block;width:100%;text-align:left;background:var(--card);border-radius:12px;padding:16px;margin-top:8px;font-size:16px}
+.mut{color:var(--mut);font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <span class="marca">TMV</span>
+  <span class="quem" id="quem">—</span>
+  <span class="sync" id="sync">…</span>
+  <button class="icone" id="btnMenu" aria-label="Menu">⚙</button>
+</header>
+<main class="wrap" id="tela"></main>
+
+<div class="veu" id="veu"><div class="folha" id="folha" role="dialog" aria-modal="true"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script>
+'use strict';
+var APP_VERSAO = '1.0.0';
+var CFG = window.TMV_CONFIG || {};
+var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
+var JANELA_DESFAZER_MIN = 15;
+
+var PASSOS = [
+  { ev: 'SAIDA_REVENDA',    nome: 'Saída da revenda',      de: null },
+  { ev: 'CHEGADA_FABRICA',  nome: 'Chegada na cervejaria', de: 'IDA' },
+  { ev: 'ENTRADA_CARREGAR', nome: 'Entrada para carregar', de: 'FABRICA' },
+  { ev: 'SAIDA_FABRICA',    nome: 'Saída da fábrica',      de: 'CARREGANDO' },
+  { ev: 'CHEGADA_REVENDA',  nome: 'Chegada na revenda',    de: 'VOLTA' }
+];
+var FASE_APOS = { SAIDA_REVENDA: 'IDA', CHEGADA_FABRICA: 'FABRICA', ENTRADA_CARREGAR: 'CARREGANDO', SAIDA_FABRICA: 'VOLTA', CHEGADA_REVENDA: 'FIM' };
+var FASE_PERMITE_PARADA = { IDA: 1, FABRICA: 1, VOLTA: 1 };
+var TIPOS_PARADA = { NAO_PROGRAMADA: 'Não programada', ALMOCO: 'Almoço', JANTAR: 'Jantar' };
+
+/* ---------- armazenamento local ---------- */
+function ler(k, padrao) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : padrao; } catch (e) { return padrao; } }
+function gravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { toast('Memória do celular cheia — avise o coordenador'); } }
+
+var perfil = ler('tmv_perfil', {});
+var viagem = ler('tmv_viagem', null);
+var fila = ler('tmv_fila', []);
+var cad = ler('tmv_cad', null) || CFG.CADASTRO_PADRAO || { motoristas: [], placas: [], fabricas: [], motivos: [] };
+var syncInfo = ler('tmv_sync', { ultimo: null, erro: null });
+if (!perfil.device_id) { perfil.device_id = uuid(); gravar('tmv_perfil', perfil); }
+
+function uuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+  });
+}
+
+/* ---------- estado derivado (fonte única: a lista de eventos) ---------- */
+function derivar(evs) {
+  var cancelados = {};
+  evs.forEach(function (e) { if (e.evento === 'CANCELA') cancelados[e.ref_id] = 1; });
+  var validos = evs.filter(function (e) { return e.evento !== 'CANCELA' && !cancelados[e.id_evento]; });
+  var fase = null, parada = null, paradas = [], marcos = {};
+  validos.forEach(function (e) {
+    if (FASE_APOS[e.evento]) { fase = FASE_APOS[e.evento]; marcos[e.evento] = e; }
+    else if (e.evento === 'PARADA_INI') { parada = e; paradas.push({ ini: e, fim: null }); }
+    else if (e.evento === 'PARADA_FIM') {
+      parada = null;
+      paradas.forEach(function (p) { if (p.ini.id_evento === e.ref_id) p.fim = e; });
+    }
+  });
+  return { fase: fase, parada: parada, paradas: paradas, marcos: marcos, validos: validos };
+}
+
+/* ---------- utilidades ---------- */
+function hhmm(iso) { var d = new Date(iso); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function dur(ms) { if (ms < 0) ms = 0; var m = Math.round(ms / 60000); return Math.floor(m / 60) + 'h' + pad(m % 60); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function $(id) { return document.getElementById(id); }
+var toastT;
+function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('on'); }, 3500); }
+
+function posicao() {
+  return new Promise(function (res) {
+    if (!CFG.GPS || !navigator.geolocation) return res({});
+    var feito = false;
+    var t = setTimeout(function () { if (!feito) { feito = true; res({}); } }, 6000);
+    navigator.geolocation.getCurrentPosition(function (p) {
+      if (feito) return; feito = true; clearTimeout(t);
+      res({ lat: p.coords.latitude.toFixed(6), lon: p.coords.longitude.toFixed(6), precisao_m: Math.round(p.coords.accuracy) });
+    }, function () { if (!feito) { feito = true; clearTimeout(t); res({}); } }, { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 });
+  });
+}
+
+/* ---------- registrar evento ---------- */
+async function registrar(evento, extra, ts) {
+  var pos = await posicao();
+  var e = {
+    id_evento: uuid(),
+    id_viagem: viagem.id,
+    ts_device: ts.toISOString(),
+    filial: CFG.FILIAL || cad.filial || '',
+    motorista: perfil.motorista,
+    placa: viagem.placa,
+    fabrica: viagem.fabrica,
+    evento: evento,
+    app_versao: APP_VERSAO,
+    device_id: perfil.device_id
+  };
+  Object.assign(e, pos, extra || {});
+  viagem.eventos.push(e);
+  fila.push(e);
+  gravar('tmv_viagem', viagem);
+  gravar('tmv_fila', fila);
+  render();
+  enviar();
+  return e;
+}
+
+/* ---------- envio (fila offline) ---------- */
+var enviando = false;
+async function enviar() {
+  if (enviando || !fila.length || !CONFIGURADO) { pintarSync(); return; }
+  enviando = true; pintarSync();
+  try {
+    var lote = fila.slice(0, 50);
+    var r = await fetch(CFG.ENDPOINT, { method: 'POST', body: JSON.stringify({ key: CFG.APP_KEY, eventos: lote }) });
+    var j = await r.json();
+    if (j.ok) {
+      var ok = {}; (j.recebidos || []).forEach(function (id) { ok[id] = 1; });
+      fila = ler('tmv_fila', []).filter(function (e) { return !ok[e.id_evento]; });
+      gravar('tmv_fila', fila);
+      syncInfo = { ultimo: new Date().toISOString(), erro: null };
+    } else {
+      syncInfo.erro = j.erro === 'chave_invalida' ? 'Chave inválida — avise o coordenador' : 'Servidor recusou (' + (j.erro || '?') + ')';
+    }
+  } catch (err) {
+    syncInfo.erro = 'sem_sinal';
+  }
+  gravar('tmv_sync', syncInfo);
+  enviando = false;
+  pintarSync();
+  if (fila.length && !syncInfo.erro) setTimeout(enviar, 500); // ainda há lote
+}
+
+function pintarSync() {
+  var s = $('sync');
+  if (!CONFIGURADO) { s.className = 'sync err'; s.textContent = 'Sem configuração'; return; }
+  if (enviando) { s.className = 'sync pend'; s.textContent = 'Enviando…'; return; }
+  if (!fila.length) { s.className = 'sync ok'; s.textContent = '✓ Enviado'; return; }
+  if (syncInfo.erro && syncInfo.erro !== 'sem_sinal') { s.className = 'sync err'; s.textContent = '⚠ ' + fila.length + ' pendente(s)'; return; }
+  s.className = 'sync pend'; s.textContent = fila.length + ' aguardando sinal';
+}
+
+async function baixarCadastro() {
+  if (!CONFIGURADO) return false;
+  try {
+    var r = await fetch(CFG.ENDPOINT + '?action=cadastro&key=' + encodeURIComponent(CFG.APP_KEY));
+    var j = await r.json();
+    if (j.ok) { cad = j; gravar('tmv_cad', cad); return true; }
+  } catch (e) {}
+  return false;
+}
+
+/* ---------- telas ---------- */
+function render() {
+  $('quem').textContent = perfil.motorista ? perfil.motorista : 'Identifique-se';
+  pintarSync();
+  var h = '';
+  if (!CONFIGURADO) h += '<div class="banner">App ainda não ligado à planilha (config.js). Os registros ficam guardados no celular.</div>';
+  if (syncInfo.erro && syncInfo.erro !== 'sem_sinal' && fila.length) h += '<div class="banner">' + esc(syncInfo.erro) + '</div>';
+
+  if (!perfil.motorista) { $('tela').innerHTML = h + telaPerfil(); return; }
+  if (!viagem) { $('tela').innerHTML = h + telaInicio(); return; }
+
+  var st = derivar(viagem.eventos);
+  if (st.fase === null) { viagem = null; gravar('tmv_viagem', null); $('tela').innerHTML = h + telaInicio(); return; }
+  $('tela').innerHTML = h + (st.fase === 'FIM' ? telaFim(st) : telaViagem(st));
+}
+
+function telaPerfil() {
+  var lista = cad.motoristas || [];
+  var h = '<h2>Quem é você?</h2>';
+  if (lista.length) {
+    h += '<div class="lista-btn">' + lista.map(function (m) { return '<button data-acao="perfil" data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div>';
+  } else {
+    h += '<div class="card"><p class="vazio">Lista de motoristas ainda não baixada.</p>' +
+         '<div class="folha" style="padding:0;background:none"><label>Digite seu nome completo</label><input id="nomeLivre" autocomplete="name"></div>' +
+         '<button class="btn btn-pri" data-acao="perfilLivre">Salvar</button></div>';
+  }
+  return h;
+}
+
+function telaInicio() {
+  var h = '<h2>Nenhuma viagem em andamento</h2>';
+  h += '<button class="btn btn-pri" data-acao="passo" data-ev="SAIDA_REVENDA">▶ Saída da revenda<small>Toque quando sair para a cervejaria</small></button>';
+  var ult = ler('tmv_ultima', null);
+  if (ult) h += '<div class="card"><div class="mut">Última viagem</div><div class="resumo" style="margin-top:6px"><span><b>' + esc(ult.fabrica) + '</b>' + esc(ult.data) + '</span><span style="text-align:right"><b>' + esc(ult.tmv) + '</b>TMV</span></div></div>';
+  return h;
+}
+
+function telaViagem(st) {
+  var ini = st.marcos.SAIDA_REVENDA;
+  var h = '<div class="card"><div class="resumo"><span><b>' + esc(viagem.fabrica) + '</b>Destino</span><span><b>' + esc(viagem.placa) + '</b>Placa</span></div>' +
+          '<div class="relogio">Em viagem há <b id="decorrido">' + dur(Date.now() - new Date(ini.ts_device)) + '</b></div></div>';
+
+  if (st.parada) {
+    var p = st.parada;
+    var nome = TIPOS_PARADA[p.tipo_parada] + (p.motivo ? ' — ' + p.motivo : '');
+    h += '<div class="parada-ativa"><div class="t">EM PARADA</div><div class="n">' + esc(nome) + '</div>' +
+         '<div class="d" id="durParada">' + dur(Date.now() - new Date(p.ts_device)) + '</div><div class="mut">desde ' + hhmm(p.ts_device) + '</div></div>';
+    h += '<button class="btn btn-parada" data-acao="fimParada">▶ Encerrar parada<small>Toque quando voltar a rodar</small></button>';
+  } else {
+    var prox = PASSOS.filter(function (x) { return x.de === st.fase; })[0];
+    if (prox) h += '<button class="btn btn-pri" data-acao="passo" data-ev="' + prox.ev + '">' + esc(prox.nome) + '<small>Toque no momento em que acontecer</small></button>';
+    if (FASE_PERMITE_PARADA[st.fase]) h += '<button class="btn btn-sec" data-acao="iniParada">⏸ Iniciar parada</button>';
+  }
+
+  h += '<h2>Linha do tempo</h2><div class="card"><ol class="linha">' + linhaDoTempo(st) + '</ol></div>';
+  if (podeDesfazer(st)) h += '<button class="btn-link" data-acao="desfazer">Desfazer último registro</button>';
+  return h;
+}
+
+function linhaDoTempo(st) {
+  var h = '';
+  var proxAchado = false;
+  PASSOS.forEach(function (p, i) {
+    var m = st.marcos[p.ev];
+    var cls = m ? 'feito' : (!proxAchado ? (proxAchado = true, 'agora') : '');
+    var extra = (p.ev === 'SAIDA_FABRICA' && m) ? '<div class="mut">Pedido ' + esc(m.pedido) + ' · NF ' + esc(m.nf) + '</div>' : '';
+    h += '<li class="' + cls + '"><span class="pt"></span><span class="nm">' + p.nome + extra + '</span><span class="hr">' + (m ? hhmm(m.ts_device) : '—') + '</span></li>';
+    // paradas que começaram depois deste marco e antes do próximo
+    var prox = PASSOS[i + 1] && st.marcos[PASSOS[i + 1].ev];
+    if (m) st.paradas.forEach(function (pa) {
+      var t = pa.ini.ts_device;
+      if (t >= m.ts_device && (!prox || t < prox.ts_device)) {
+        var nome = TIPOS_PARADA[pa.ini.tipo_parada] + (pa.ini.motivo ? ' (' + pa.ini.motivo + ')' : '');
+        var d = pa.fim ? dur(new Date(pa.fim.ts_device) - new Date(t)) : 'em curso';
+        h += '<li class="par"><span class="pt"></span><span class="nm">⏸ ' + esc(nome) + '</span><span class="hr">' + hhmm(t) + ' · ' + d + '</span></li>';
+      }
+    });
+  });
+  return h;
+}
+
+function telaFim(st) {
+  var a = new Date(st.marcos.SAIDA_REVENDA.ts_device), b = new Date(st.marcos.CHEGADA_REVENDA.ts_device);
+  var h = '<div class="card fim"><div class="mut">Viagem concluída</div><div class="grande">' + dur(b - a) + '</div><div class="mut">Tempo total da viagem (TMV)</div></div>';
+  h += '<button class="btn btn-pri" data-acao="novaViagem">Concluir e liberar<small>Prepara o app para a próxima viagem</small></button>';
+  h += '<h2>Linha do tempo</h2><div class="card"><ol class="linha">' + linhaDoTempo(st) + '</ol></div>';
+  if (podeDesfazer(st)) h += '<button class="btn-link" data-acao="desfazer">Desfazer último registro</button>';
+  return h;
+}
+
+function podeDesfazer(st) {
+  var u = st.validos[st.validos.length - 1];
+  return u && (Date.now() - new Date(u.ts_device)) < JANELA_DESFAZER_MIN * 60000;
+}
+
+/* ---------- folha de confirmação ---------- */
+var relogioFolha;
+function abrirFolha(html, aoConfirmar) {
+  $('folha').innerHTML = html;
+  $('veu').classList.add('on');
+  var hora = $('folha').querySelector('.hora');
+  clearInterval(relogioFolha);
+  if (hora) { var tick = function () { var d = new Date(); hora.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()); }; tick(); relogioFolha = setInterval(tick, 1000); }
+  $('folha').onclick = async function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.chip !== undefined) {
+      b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.remove('sel'); });
+      b.classList.add('sel');
+      if (b.dataset.onchip) window[b.dataset.onchip](b);
+      return;
+    }
+    if (b.dataset.m && aoConfirmar.menu) return aoConfirmar.menu(b.dataset.m);
+    if (b.dataset.f === 'cancelar') return fecharFolha();
+    if (b.dataset.f === 'ok') {
+      var ts = new Date(); // o horário é o do toque em Confirmar, não o da abertura
+      var erro = $('folha').querySelector('.erro-campo');
+      var msg = aoConfirmar.validar ? aoConfirmar.validar() : null;
+      if (msg) { if (erro) erro.textContent = msg; return; }
+      b.disabled = true; b.textContent = 'Registrando…';
+      await aoConfirmar.executar(ts);
+      fecharFolha();
+    }
+  };
+}
+function fecharFolha() { $('veu').classList.remove('on'); clearInterval(relogioFolha); }
+
+function opcoes(lista, atual) {
+  return '<option value="">Selecione…</option>' + (lista || []).map(function (v) { return '<option' + (v === atual ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('');
+}
+function campoLista(id, rotulo, lista, atual) {
+  if (lista && lista.length) return '<label for="' + id + '">' + rotulo + '</label><select id="' + id + '">' + opcoes(lista, atual) + '</select>';
+  return '<label for="' + id + '">' + rotulo + '</label><input id="' + id + '" value="' + esc(atual || '') + '">';
+}
+var BOTOES = '<div class="erro-campo"></div><div class="acoes"><button class="btn btn-sec" data-f="cancelar">Voltar</button><button class="btn btn-pri" data-f="ok">Confirmar</button></div>';
+
+function folhaPasso(evento) {
+  var p = PASSOS.filter(function (x) { return x.ev === evento; })[0];
+  var h = '<h3>' + p.nome + '</h3><div class="hora"></div><div class="mut">Horário registrado ao tocar em Confirmar</div>';
+  if (evento === 'SAIDA_REVENDA') {
+    h += campoLista('fFabrica', 'Cervejaria de destino', cad.fabricas, perfil.ultimaFabrica);
+    h += campoLista('fPlaca', 'Placa do veículo', cad.placas, perfil.ultimaPlaca);
+  }
+  if (evento === 'SAIDA_FABRICA') {
+    h += '<label for="fPedido">Número do pedido carregado</label><input id="fPedido" inputmode="numeric" autocomplete="off">';
+    h += '<label for="fNf">Número da NF</label><input id="fNf" inputmode="numeric" autocomplete="off">';
+    h += '<div class="mut" style="margin-top:6px">Mais de um? Separe com barra: 12345 / 12346</div>';
+  }
+  abrirFolha(h + BOTOES, {
+    validar: function () {
+      if (evento === 'SAIDA_REVENDA') {
+        if (!$('fFabrica').value.trim()) return 'Escolha a cervejaria de destino.';
+        if (!$('fPlaca').value.trim()) return 'Informe a placa.';
+      }
+      if (evento === 'SAIDA_FABRICA') {
+        var re = /^\d[\d\s\/,;-]*$/;
+        if (!re.test($('fPedido').value.trim())) return 'Número do pedido: só números.';
+        if (!re.test($('fNf').value.trim())) return 'Número da NF: só números.';
+      }
+      return null;
+    },
+    executar: async function (ts) {
+      var extra = {};
+      if (evento === 'SAIDA_REVENDA') {
+        var fab = $('fFabrica').value.trim(), placa = $('fPlaca').value.trim().toUpperCase();
+        viagem = { id: uuid(), fabrica: fab, placa: placa, eventos: [] };
+        perfil.ultimaFabrica = fab; perfil.ultimaPlaca = placa; gravar('tmv_perfil', perfil);
+      }
+      if (evento === 'SAIDA_FABRICA') { extra.pedido = $('fPedido').value.trim(); extra.nf = $('fNf').value.trim(); }
+      await registrar(evento, extra, ts);
+      toast('✓ ' + p.nome + ' registrada às ' + hhmm(ts.toISOString()));
+    }
+  });
+}
+
+function folhaIniParada() {
+  var h = '<h3>Iniciar parada</h3><div class="hora"></div>';
+  h += '<label>Tipo de parada</label><div class="chips" id="cTipo">' +
+       Object.keys(TIPOS_PARADA).map(function (k) { return '<button data-chip data-v="' + k + '" data-onchip="mostrarMotivo">' + TIPOS_PARADA[k] + '</button>'; }).join('') + '</div>';
+  h += '<div id="blocoMotivo" style="display:none"><label>Motivo</label><div class="chips" id="cMotivo">' +
+       (cad.motivos || []).map(function (m) { return '<button data-chip data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div></div>';
+  abrirFolha(h + BOTOES, {
+    validar: function () {
+      var t = $('cTipo').querySelector('.sel');
+      if (!t) return 'Escolha o tipo de parada.';
+      if (t.dataset.v === 'NAO_PROGRAMADA' && !$('cMotivo').querySelector('.sel')) return 'Escolha o motivo.';
+      return null;
+    },
+    executar: async function (ts) {
+      var tipo = $('cTipo').querySelector('.sel').dataset.v;
+      var mot = tipo === 'NAO_PROGRAMADA' ? $('cMotivo').querySelector('.sel').dataset.v : '';
+      await registrar('PARADA_INI', { tipo_parada: tipo, motivo: mot }, ts);
+      toast('⏸ Parada iniciada às ' + hhmm(ts.toISOString()));
+    }
+  });
+}
+window.mostrarMotivo = function (b) { $('blocoMotivo').style.display = b.dataset.v === 'NAO_PROGRAMADA' ? 'block' : 'none'; };
+
+function folhaFimParada() {
+  var st = derivar(viagem.eventos);
+  var p = st.parada;
+  var h = '<h3>Encerrar parada</h3><div class="hora"></div><div class="mut">' + esc(TIPOS_PARADA[p.tipo_parada]) + ' desde ' + hhmm(p.ts_device) + '</div>';
+  abrirFolha(h + BOTOES, {
+    executar: async function (ts) {
+      await registrar('PARADA_FIM', { tipo_parada: p.tipo_parada, motivo: p.motivo || '', ref_id: p.id_evento }, ts);
+      toast('▶ Parada encerrada — ' + dur(ts - new Date(p.ts_device)));
+    }
+  });
+}
+
+function folhaDesfazer() {
+  var st = derivar(viagem.eventos);
+  var u = st.validos[st.validos.length - 1];
+  var nome = (PASSOS.filter(function (x) { return x.ev === u.evento; })[0] || {}).nome ||
+             (u.evento === 'PARADA_INI' ? 'Início de parada' : 'Fim de parada');
+  var h = '<h3>Desfazer registro?</h3><p>Vai anular <b>' + esc(nome) + '</b> das ' + hhmm(u.ts_device) + '.</p>' +
+          (u.evento === 'SAIDA_REVENDA' ? '<p class="mut">Isso cancela a viagem inteira.</p>' : '');
+  abrirFolha(h + BOTOES, {
+    executar: async function (ts) {
+      await registrar('CANCELA', { ref_id: u.id_evento, obs: 'desfeito pelo motorista: ' + u.evento }, ts);
+      toast('Registro anulado');
+    }
+  });
+}
+
+function folhaMenu() {
+  var h = '<h3>Menu</h3>' +
+    '<button class="menu-item" data-m="sync">Enviar pendentes agora (' + fila.length + ')</button>' +
+    '<button class="menu-item" data-m="cad">Atualizar listas (motoristas, placas, fábricas)</button>' +
+    '<button class="menu-item" data-m="trocar">Trocar motorista</button>' +
+    '<p class="mut" style="margin-top:14px">Versão ' + APP_VERSAO + ' · aparelho ' + esc(perfil.device_id.slice(0, 8)) +
+    (syncInfo.ultimo ? ' · último envio ' + new Date(syncInfo.ultimo).toLocaleString('pt-BR') : '') + '</p>' +
+    '<div class="acoes"><button class="btn btn-sec" style="flex:1" data-f="cancelar">Fechar</button></div>';
+  abrirFolha(h, {
+    menu: async function (m) {
+      if (m === 'sync') { syncInfo.erro = null; await enviar(); toast(fila.length ? 'Ainda há ' + fila.length + ' pendente(s)' : 'Tudo enviado'); }
+      if (m === 'cad') { toast((await baixarCadastro()) ? 'Listas atualizadas' : 'Sem sinal ou sem configuração'); }
+      if (m === 'trocar') {
+        if (viagem) { toast('Conclua a viagem antes de trocar de motorista'); return; }
+        delete perfil.motorista; gravar('tmv_perfil', perfil);
+      }
+      fecharFolha(); render();
+    }
+  });
+}
+
+/* ---------- eventos da tela ---------- */
+$('tela').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-acao]'); if (!b) return;
+  var a = b.dataset.acao;
+  if (a === 'perfil') { perfil.motorista = b.dataset.v; gravar('tmv_perfil', perfil); render(); }
+  if (a === 'perfilLivre') { var n = $('nomeLivre').value.trim(); if (n.length < 3) return toast('Digite o nome completo'); perfil.motorista = n; gravar('tmv_perfil', perfil); render(); }
+  if (a === 'passo') folhaPasso(b.dataset.ev);
+  if (a === 'iniParada') folhaIniParada();
+  if (a === 'fimParada') folhaFimParada();
+  if (a === 'desfazer') folhaDesfazer();
+  if (a === 'novaViagem') {
+    var st = derivar(viagem.eventos);
+    gravar('tmv_ultima', { fabrica: viagem.fabrica, data: new Date(st.marcos.CHEGADA_REVENDA.ts_device).toLocaleDateString('pt-BR'),
+      tmv: dur(new Date(st.marcos.CHEGADA_REVENDA.ts_device) - new Date(st.marcos.SAIDA_REVENDA.ts_device)) });
+    viagem = null; gravar('tmv_viagem', null); render();
+  }
+});
+$('btnMenu').addEventListener('click', folhaMenu);
+$('veu').addEventListener('click', function (ev) { if (ev.target === $('veu')) fecharFolha(); });
+
+// relógios na tela
+setInterval(function () {
+  if (!viagem) return;
+  var st = derivar(viagem.eventos);
+  var d = $('decorrido'); if (d && st.marcos.SAIDA_REVENDA) d.textContent = dur(Date.now() - new Date(st.marcos.SAIDA_REVENDA.ts_device));
+  var p = $('durParada'); if (p && st.parada) p.textContent = dur(Date.now() - new Date(st.parada.ts_device));
+}, 20000);
+
+// tentativas de envio
+window.addEventListener('online', enviar);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) enviar(); });
+setInterval(enviar, 60000);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+
+render();
+baixarCadastro().then(function (ok) { if (ok) render(); });
+enviar();
+</script>
+</body>
+</html>
