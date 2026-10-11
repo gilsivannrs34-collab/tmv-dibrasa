@@ -106,7 +106,7 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 <script src="config.js"></script>
 <script>
 'use strict';
-var APP_VERSAO = '1.0.3';
+var APP_VERSAO = '1.0.4';
 var CFG = window.TMV_CONFIG || {};
 var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
 var JANELA_DESFAZER_MIN = 15;
@@ -320,6 +320,7 @@ function linhaDoTempo(st) {
     var cls = m ? 'feito' : (!proxAchado ? (proxAchado = true, 'agora') : '');
     var extra = (p.ev === 'SAIDA_FABRICA' && m) ? '<div class="mut">Pedido ' + esc(m.pedido) + ' · NF ' + esc(m.nf) + '</div>' : '';
     if (p.ev === 'SAIDA_REVENDA' && m && m.agendamento) extra = '<div class="mut">' + (m.agendamento === 'SEM' ? 'Sem agendamento' : 'Agendamento ' + esc(m.agendamento.slice(8, 10) + '/' + m.agendamento.slice(5, 7) + ' ' + m.agendamento.slice(11).replace('-', ' – '))) + '</div>';
+    if ((p.ev === 'SAIDA_REVENDA' || p.ev === 'CHEGADA_REVENDA') && m && m.km != null && m.km !== '') extra += '<div class="mut">Km ' + Number(m.km).toLocaleString('pt-BR') + '</div>';
     h += '<li class="' + cls + '"><span class="pt"></span><span class="nm">' + p.nome + extra + '</span><span class="hr">' + (m ? hhmm(m.ts_device) : '—') + '</span></li>';
     // paradas que começaram depois deste marco e antes do próximo
     var prox = PASSOS[i + 1] && st.marcos[PASSOS[i + 1].ev];
@@ -337,7 +338,9 @@ function linhaDoTempo(st) {
 
 function telaFim(st) {
   var a = new Date(st.marcos.SAIDA_REVENDA.ts_device), b = new Date(st.marcos.CHEGADA_REVENDA.ts_device);
-  var h = '<div class="card fim"><div class="mut">Viagem concluída</div><div class="grande">' + dur(b - a) + '</div><div class="mut">Tempo total da viagem (TMV)</div></div>';
+  var k1 = st.marcos.SAIDA_REVENDA.km, k2 = st.marcos.CHEGADA_REVENDA.km;
+  var kmR = k1 != null && k1 !== '' && k2 != null && k2 !== '' ? k2 - k1 : null;
+  var h = '<div class="card fim"><div class="mut">Viagem concluída</div><div class="grande">' + dur(b - a) + '</div><div class="mut">Tempo total da viagem (TMV)</div>' + (kmR != null ? '<div class="relogio">Km rodados (ida e volta): <b>' + kmR.toLocaleString('pt-BR') + '</b></div>' : '') + '</div>';
   h += '<button class="btn btn-pri" data-acao="novaViagem">Concluir e liberar<small>Prepara o app para a próxima viagem</small></button>';
   h += '<h2>Linha do tempo</h2><div class="card"><ol class="linha">' + linhaDoTempo(st) + '</ol></div>';
   if (podeDesfazer(st)) h += '<button class="btn-link" data-acao="desfazer">Desfazer último registro</button>';
@@ -389,6 +392,12 @@ function campoLista(id, rotulo, lista, atual) {
 }
 // Slots de agendamento a partir de agora; o valor leva a data para o Dash não precisar adivinhar o dia.
 // 'SEM' = não havia slot disponível e a carreta vai entrar sem agendamento.
+// Km do tacógrafo: aceita "254310" ou "254.310"; devolve número ou null
+function kmLimpo(t) { t = String(t == null ? '' : t).replace(/[.\s]/g, ''); return /^\d{1,7}$/.test(t) ? parseInt(t, 10) : null; }
+function kmSaidaViagem() {
+  var m = viagem && derivar(viagem.eventos).marcos.SAIDA_REVENDA;
+  return m && m.km != null && m.km !== '' ? Number(m.km) : null;
+}
 function opcoesAgenda() {
   var h = '<option value="">Selecione…</option><option value="SEM">Sem agendamento (não tinha slot)</option>';
   var base = new Date(); base.setMinutes(0, 0, 0);
@@ -412,7 +421,12 @@ function folhaPasso(evento) {
   if (evento === 'SAIDA_REVENDA') {
     h += campoLista('fFabrica', 'Cervejaria de destino', cad.fabricas, perfil.ultimaFabrica);
     h += campoLista('fPlaca', 'Placa do veículo', cad.placas, ''); // sem motorista fixo por placa: escolher a cada saída
+    h += '<label for="fKm">Km de saída (tacógrafo)</label><input id="fKm" inputmode="numeric" autocomplete="off">';
     h += '<label for="fAgenda">Agendamento na cervejaria (Giro)</label><select id="fAgenda">' + opcoesAgenda() + '</select>';
+  }
+  if (evento === 'CHEGADA_REVENDA') {
+    h += '<label for="fKm">Km de chegada (tacógrafo)</label><input id="fKm" inputmode="numeric" autocomplete="off">';
+    if (kmSaidaViagem() != null) h += '<div class="mut" style="margin-top:6px">Km de saída desta viagem: ' + kmSaidaViagem().toLocaleString('pt-BR') + '</div>';
   }
   if (evento === 'SAIDA_FABRICA') {
     h += '<label for="fPedido">Número do pedido carregado</label><input id="fPedido" inputmode="numeric" autocomplete="off">';
@@ -425,6 +439,12 @@ function folhaPasso(evento) {
         if (!$('fFabrica').value.trim()) return 'Escolha a cervejaria de destino.';
         if (!$('fPlaca').value.trim()) return 'Informe a placa.';
         if (!$('fAgenda').value) return 'Informe o agendamento ou escolha “Sem agendamento”.';
+        if (kmLimpo($('fKm').value) == null) return 'Informe o km de saída (só números).';
+      }
+      if (evento === 'CHEGADA_REVENDA') {
+        var kc = kmLimpo($('fKm').value), ks = kmSaidaViagem();
+        if (kc == null) return 'Informe o km de chegada (só números).';
+        if (ks != null && kc <= ks) return 'O km de chegada tem que ser maior que o de saída (' + ks.toLocaleString('pt-BR') + ').';
       }
       if (evento === 'SAIDA_FABRICA') {
         var re = /^\d[\d\s\/,;-]*$/;
@@ -440,7 +460,9 @@ function folhaPasso(evento) {
         viagem = { id: uuid(), fabrica: fab, placa: placa, eventos: [] };
         perfil.ultimaFabrica = fab; gravar('tmv_perfil', perfil);
         extra.agendamento = $('fAgenda').value;
+        extra.km = kmLimpo($('fKm').value);
       }
+      if (evento === 'CHEGADA_REVENDA') extra.km = kmLimpo($('fKm').value);
       if (evento === 'SAIDA_FABRICA') { extra.pedido = $('fPedido').value.trim(); extra.nf = $('fNf').value.trim(); }
       await registrar(evento, extra, ts);
       toast('✓ ' + p.nome + ' registrada às ' + hhmm(ts.toISOString()));
