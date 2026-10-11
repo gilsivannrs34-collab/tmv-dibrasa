@@ -106,7 +106,7 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 <script src="config.js"></script>
 <script>
 'use strict';
-var APP_VERSAO = '1.0.4';
+var APP_VERSAO = '1.0.5';
 var CFG = window.TMV_CONFIG || {};
 var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
 var JANELA_DESFAZER_MIN = 15;
@@ -318,7 +318,7 @@ function linhaDoTempo(st) {
   PASSOS.forEach(function (p, i) {
     var m = st.marcos[p.ev];
     var cls = m ? 'feito' : (!proxAchado ? (proxAchado = true, 'agora') : '');
-    var extra = (p.ev === 'SAIDA_FABRICA' && m) ? '<div class="mut">Pedido ' + esc(m.pedido) + ' · NF ' + esc(m.nf) + '</div>' : '';
+    var extra = (p.ev === 'SAIDA_FABRICA' && m) ? '<div class="mut">NF ' + esc(m.nf) + '</div>' : '';
     if (p.ev === 'SAIDA_REVENDA' && m && m.agendamento) extra = '<div class="mut">' + (m.agendamento === 'SEM' ? 'Sem agendamento' : 'Agendamento ' + esc(m.agendamento.slice(8, 10) + '/' + m.agendamento.slice(5, 7) + ' ' + m.agendamento.slice(11).replace('-', ' – '))) + '</div>';
     if ((p.ev === 'SAIDA_REVENDA' || p.ev === 'CHEGADA_REVENDA') && m && m.km != null && m.km !== '') extra += '<div class="mut">Km ' + Number(m.km).toLocaleString('pt-BR') + '</div>';
     h += '<li class="' + cls + '"><span class="pt"></span><span class="nm">' + p.nome + extra + '</span><span class="hr">' + (m ? hhmm(m.ts_device) : '—') + '</span></li>';
@@ -429,7 +429,6 @@ function folhaPasso(evento) {
     if (kmSaidaViagem() != null) h += '<div class="mut" style="margin-top:6px">Km de saída desta viagem: ' + kmSaidaViagem().toLocaleString('pt-BR') + '</div>';
   }
   if (evento === 'SAIDA_FABRICA') {
-    h += '<label for="fPedido">Número do pedido carregado</label><input id="fPedido" inputmode="numeric" autocomplete="off">';
     h += '<label for="fNf">Número da NF</label><input id="fNf" inputmode="numeric" autocomplete="off">';
     h += '<div class="mut" style="margin-top:6px">Mais de um? Separe com barra: 12345 / 12346</div>';
   }
@@ -448,7 +447,6 @@ function folhaPasso(evento) {
       }
       if (evento === 'SAIDA_FABRICA') {
         var re = /^\d[\d\s\/,;-]*$/;
-        if (!re.test($('fPedido').value.trim())) return 'Número do pedido: só números.';
         if (!re.test($('fNf').value.trim())) return 'Número da NF: só números.';
       }
       return null;
@@ -463,7 +461,7 @@ function folhaPasso(evento) {
         extra.km = kmLimpo($('fKm').value);
       }
       if (evento === 'CHEGADA_REVENDA') extra.km = kmLimpo($('fKm').value);
-      if (evento === 'SAIDA_FABRICA') { extra.pedido = $('fPedido').value.trim(); extra.nf = $('fNf').value.trim(); }
+      if (evento === 'SAIDA_FABRICA') extra.nf = $('fNf').value.trim();
       await registrar(evento, extra, ts);
       toast('✓ ' + p.nome + ' registrada às ' + hhmm(ts.toISOString()));
     }
