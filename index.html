@@ -100,10 +100,11 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 <script src="config.js"></script>
 <script>
 'use strict';
-var APP_VERSAO = '1.0.1';
+var APP_VERSAO = '1.0.2';
 var CFG = window.TMV_CONFIG || {};
 var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
 var JANELA_DESFAZER_MIN = 15;
+var SLOT_AGENDA_H = 2; // duração do slot de agendamento (Giro) na cervejaria
 
 var PASSOS = [
   { ev: 'SAIDA_REVENDA',    nome: 'Saída da revenda',      de: null },
@@ -308,6 +309,7 @@ function linhaDoTempo(st) {
     var m = st.marcos[p.ev];
     var cls = m ? 'feito' : (!proxAchado ? (proxAchado = true, 'agora') : '');
     var extra = (p.ev === 'SAIDA_FABRICA' && m) ? '<div class="mut">Pedido ' + esc(m.pedido) + ' · NF ' + esc(m.nf) + '</div>' : '';
+    if (p.ev === 'SAIDA_REVENDA' && m && m.agendamento) extra = '<div class="mut">' + (m.agendamento === 'SEM' ? 'Sem agendamento' : 'Agendamento ' + esc(m.agendamento.slice(8, 10) + '/' + m.agendamento.slice(5, 7) + ' ' + m.agendamento.slice(11).replace('-', ' – '))) + '</div>';
     h += '<li class="' + cls + '"><span class="pt"></span><span class="nm">' + p.nome + extra + '</span><span class="hr">' + (m ? hhmm(m.ts_device) : '—') + '</span></li>';
     // paradas que começaram depois deste marco e antes do próximo
     var prox = PASSOS[i + 1] && st.marcos[PASSOS[i + 1].ev];
@@ -375,6 +377,23 @@ function campoLista(id, rotulo, lista, atual) {
   if (lista && lista.length) return '<label for="' + id + '">' + rotulo + '</label><select id="' + id + '">' + opcoes(lista, atual) + '</select>';
   return '<label for="' + id + '">' + rotulo + '</label><input id="' + id + '" value="' + esc(atual || '') + '">';
 }
+// Slots de agendamento a partir de agora; o valor leva a data para o Dash não precisar adivinhar o dia.
+// 'SEM' = não havia slot disponível e a carreta vai entrar sem agendamento.
+function opcoesAgenda() {
+  var h = '<option value="">Selecione…</option><option value="SEM">Sem agendamento (não tinha slot)</option>';
+  var base = new Date(); base.setMinutes(0, 0, 0);
+  var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  var NOMES = { '-1': 'Ontem', '0': 'Hoje', '1': 'Amanhã' };
+  for (var i = -2; i <= 47; i++) {
+    var a = new Date(base.getTime() + i * 3600000), b = new Date(a.getTime() + SLOT_AGENDA_H * 3600000);
+    var dia = new Date(a); dia.setHours(0, 0, 0, 0);
+    var dd = Math.round((dia - hoje) / 86400000);
+    var faixa = pad(a.getHours()) + ':00-' + pad(b.getHours()) + ':00';
+    var valor = a.getFullYear() + '-' + pad(a.getMonth() + 1) + '-' + pad(a.getDate()) + ' ' + faixa;
+    h += '<option value="' + valor + '">' + (NOMES[dd] || pad(a.getDate()) + '/' + pad(a.getMonth() + 1)) + ' · ' + faixa.replace('-', ' – ') + '</option>';
+  }
+  return h;
+}
 var BOTOES = '<div class="erro-campo"></div><div class="acoes"><button class="btn btn-sec" data-f="cancelar">Voltar</button><button class="btn btn-pri" data-f="ok">Confirmar</button></div>';
 
 function folhaPasso(evento) {
@@ -383,6 +402,7 @@ function folhaPasso(evento) {
   if (evento === 'SAIDA_REVENDA') {
     h += campoLista('fFabrica', 'Cervejaria de destino', cad.fabricas, perfil.ultimaFabrica);
     h += campoLista('fPlaca', 'Placa do veículo', cad.placas, ''); // sem motorista fixo por placa: escolher a cada saída
+    h += '<label for="fAgenda">Agendamento na cervejaria (Giro)</label><select id="fAgenda">' + opcoesAgenda() + '</select>';
   }
   if (evento === 'SAIDA_FABRICA') {
     h += '<label for="fPedido">Número do pedido carregado</label><input id="fPedido" inputmode="numeric" autocomplete="off">';
@@ -394,6 +414,7 @@ function folhaPasso(evento) {
       if (evento === 'SAIDA_REVENDA') {
         if (!$('fFabrica').value.trim()) return 'Escolha a cervejaria de destino.';
         if (!$('fPlaca').value.trim()) return 'Informe a placa.';
+        if (!$('fAgenda').value) return 'Informe o agendamento ou escolha “Sem agendamento”.';
       }
       if (evento === 'SAIDA_FABRICA') {
         var re = /^\d[\d\s\/,;-]*$/;
@@ -408,6 +429,7 @@ function folhaPasso(evento) {
         var fab = $('fFabrica').value.trim(), placa = $('fPlaca').value.trim().toUpperCase();
         viagem = { id: uuid(), fabrica: fab, placa: placa, eventos: [] };
         perfil.ultimaFabrica = fab; gravar('tmv_perfil', perfil);
+        extra.agendamento = $('fAgenda').value;
       }
       if (evento === 'SAIDA_FABRICA') { extra.pedido = $('fPedido').value.trim(); extra.nf = $('fNf').value.trim(); }
       await registrar(evento, extra, ts);
