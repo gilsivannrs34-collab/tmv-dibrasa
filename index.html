@@ -106,7 +106,7 @@ li.par{font-size:14px;color:#ffcfaa;padding:6px 0}
 <script src="config.js"></script>
 <script>
 'use strict';
-var APP_VERSAO = '1.0.5';
+var APP_VERSAO = '1.0.6';
 var CFG = window.TMV_CONFIG || {};
 var CONFIGURADO = !!CFG.ENDPOINT && CFG.ENDPOINT.indexOf('http') === 0 && !!CFG.APP_KEY && CFG.APP_KEY.indexOf('COLE_') !== 0;
 var JANELA_DESFAZER_MIN = 15;
@@ -134,6 +134,19 @@ var cad = ler('tmv_cad', null) || CFG.CADASTRO_PADRAO || { motoristas: [], placa
 var syncInfo = ler('tmv_sync', { ultimo: null, erro: null });
 if (!perfil.device_id) { perfil.device_id = uuid(); gravar('tmv_perfil', perfil); }
 
+/* ---------- filial e listas do cadastro ---------- */
+function filialAtual() { return perfil.filial || CFG.FILIAL || cad.filial || ''; }
+var LEGADO = { MOTORISTA: 'motoristas', PLACA: 'placas', FABRICA: 'fabricas', MOTIVO_PARADA: 'motivos' };
+// Lista do cadastro para a filial do aparelho. Sem filial na linha: motorista e placa são da filial padrão; cervejaria e motivo valem para todas.
+function lista(tipo) {
+  if (!cad.itens) return cad[LEGADO[tipo]] || [];
+  var minha = filialAtual(), padrao = cad.filial || '';
+  return cad.itens.filter(function (i) {
+    if (i.tipo !== tipo) return false;
+    if (i.filial) return i.filial === minha;
+    return tipo === 'FABRICA' || tipo === 'MOTIVO_PARADA' || minha === padrao;
+  }).map(function (i) { return i.valor; });
+}
 function uuid() {
   if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -186,7 +199,7 @@ async function registrar(evento, extra, ts) {
     id_evento: uuid(),
     id_viagem: viagem.id,
     ts_device: ts.toISOString(),
-    filial: CFG.FILIAL || cad.filial || '',
+    filial: filialAtual(),
     motorista: perfil.motorista,
     placa: viagem.placa,
     fabrica: viagem.fabrica,
@@ -266,19 +279,26 @@ function render() {
 }
 
 function telaPerfil() {
-  var lista = cad.motoristas || [];
-  var filial = CFG.FILIAL || cad.filial || '';
+  var variasFiliais = cad.filiais && cad.filiais.length > 1;
+  var escolher = variasFiliais && !perfil.filial;
+  var nomes = escolher ? [] : lista('MOTORISTA');
+  var filial = escolher ? '' : filialAtual();
   var h = '<div class="boas"><img src="icons/logo.png" alt="Cervejaria Ambev Dibrasa"><div class="tit"><b>TMV</b> · Tempo de Viagem</div>' +
           (filial ? '<div class="fil">' + esc(filial) + '</div>' : '') +
           '<p>Registre cada etapa da viagem até a cervejaria com um toque. É para medir os tempos e reduzir a espera, não para vigiar ninguém.</p></div>';
+  if (escolher) {
+    return h + '<h2>Qual é a sua filial?</h2><div class="mut">Toque na filial em que você trabalha.</div><div class="lista-btn">' +
+      cad.filiais.map(function (f) { return '<button data-acao="filial" data-v="' + esc(f) + '">' + esc(f) + '</button>'; }).join('') + '</div>';
+  }
   h += '<h2>Quem é você?</h2><div class="mut">Toque no seu nome. É só desta vez: depois o celular lembra.</div>';
-  if (lista.length) {
-    h += '<div class="lista-btn">' + lista.map(function (m) { return '<button data-acao="perfil" data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div>';
+  if (nomes.length) {
+    h += '<div class="lista-btn">' + nomes.map(function (m) { return '<button data-acao="perfil" data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div>';
   } else {
     h += '<div class="card"><p class="vazio">Lista de motoristas ainda não baixada.</p>' +
          '<div class="folha" style="padding:0;background:none"><label>Digite seu nome completo</label><input id="nomeLivre" autocomplete="name"></div>' +
          '<button class="btn btn-pri" data-acao="perfilLivre">Salvar</button></div>';
   }
+  if (variasFiliais) h += '<button class="btn-link" data-acao="trocarFilial">Não é a sua filial? Trocar</button>';
   return h;
 }
 
@@ -320,6 +340,7 @@ function linhaDoTempo(st) {
     var cls = m ? 'feito' : (!proxAchado ? (proxAchado = true, 'agora') : '');
     var extra = (p.ev === 'SAIDA_FABRICA' && m) ? '<div class="mut">NF ' + esc(m.nf) + '</div>' : '';
     if (p.ev === 'SAIDA_REVENDA' && m && m.agendamento) extra = '<div class="mut">' + (m.agendamento === 'SEM' ? 'Sem agendamento' : 'Agendamento ' + esc(m.agendamento.slice(8, 10) + '/' + m.agendamento.slice(5, 7) + ' ' + m.agendamento.slice(11).replace('-', ' – '))) + '</div>';
+    if (p.ev === 'SAIDA_REVENDA' && m && m.nf_saida) extra += '<div class="mut">NF vasilhame ' + esc(m.nf_saida) + '</div>';
     if ((p.ev === 'SAIDA_REVENDA' || p.ev === 'CHEGADA_REVENDA') && m && m.km != null && m.km !== '') extra += '<div class="mut">Km ' + Number(m.km).toLocaleString('pt-BR') + '</div>';
     h += '<li class="' + cls + '"><span class="pt"></span><span class="nm">' + p.nome + extra + '</span><span class="hr">' + (m ? hhmm(m.ts_device) : '—') + '</span></li>';
     // paradas que começaram depois deste marco e antes do próximo
@@ -419,9 +440,10 @@ function folhaPasso(evento) {
   var p = PASSOS.filter(function (x) { return x.ev === evento; })[0];
   var h = '<h3>' + p.nome + '</h3><div class="hora"></div><div class="mut">Horário registrado ao tocar em Confirmar</div>';
   if (evento === 'SAIDA_REVENDA') {
-    h += campoLista('fFabrica', 'Cervejaria de destino', cad.fabricas, perfil.ultimaFabrica);
-    h += campoLista('fPlaca', 'Placa do veículo', cad.placas, ''); // sem motorista fixo por placa: escolher a cada saída
+    h += campoLista('fFabrica', 'Cervejaria de destino', lista('FABRICA'), perfil.ultimaFabrica);
+    h += campoLista('fPlaca', 'Placa do veículo', lista('PLACA'), ''); // sem motorista fixo por placa: escolher a cada saída
     h += '<label for="fKm">Km de saída (tacógrafo)</label><input id="fKm" inputmode="numeric" autocomplete="off">';
+    h += '<label for="fNfSaida">NF de vasilhame (ativo de giro)</label><input id="fNfSaida" inputmode="numeric" autocomplete="off">';
     h += '<label for="fAgenda">Agendamento na cervejaria (Giro)</label><select id="fAgenda">' + opcoesAgenda() + '</select>';
   }
   if (evento === 'CHEGADA_REVENDA') {
@@ -429,7 +451,7 @@ function folhaPasso(evento) {
     if (kmSaidaViagem() != null) h += '<div class="mut" style="margin-top:6px">Km de saída desta viagem: ' + kmSaidaViagem().toLocaleString('pt-BR') + '</div>';
   }
   if (evento === 'SAIDA_FABRICA') {
-    h += '<label for="fNf">Número da NF</label><input id="fNf" inputmode="numeric" autocomplete="off">';
+    h += '<label for="fNf">Número da NF da cervejaria</label><input id="fNf" inputmode="numeric" autocomplete="off">';
     h += '<div class="mut" style="margin-top:6px">Mais de um? Separe com barra: 12345 / 12346</div>';
   }
   abrirFolha(h + BOTOES, {
@@ -439,6 +461,7 @@ function folhaPasso(evento) {
         if (!$('fPlaca').value.trim()) return 'Informe a placa.';
         if (!$('fAgenda').value) return 'Informe o agendamento ou escolha “Sem agendamento”.';
         if (kmLimpo($('fKm').value) == null) return 'Informe o km de saída (só números).';
+        if (!/^\d[\d\s\/,;-]*$/.test($('fNfSaida').value.trim())) return 'Informe a NF de vasilhame (só números).';
       }
       if (evento === 'CHEGADA_REVENDA') {
         var kc = kmLimpo($('fKm').value), ks = kmSaidaViagem();
@@ -459,6 +482,7 @@ function folhaPasso(evento) {
         perfil.ultimaFabrica = fab; gravar('tmv_perfil', perfil);
         extra.agendamento = $('fAgenda').value;
         extra.km = kmLimpo($('fKm').value);
+        extra.nf_saida = $('fNfSaida').value.trim();
       }
       if (evento === 'CHEGADA_REVENDA') extra.km = kmLimpo($('fKm').value);
       if (evento === 'SAIDA_FABRICA') extra.nf = $('fNf').value.trim();
@@ -473,7 +497,7 @@ function folhaIniParada() {
   h += '<label>Tipo de parada</label><div class="chips" id="cTipo">' +
        Object.keys(TIPOS_PARADA).map(function (k) { return '<button data-chip data-v="' + k + '" data-onchip="mostrarMotivo">' + TIPOS_PARADA[k] + '</button>'; }).join('') + '</div>';
   h += '<div id="blocoMotivo" style="display:none"><label>Motivo</label><div class="chips" id="cMotivo">' +
-       (cad.motivos || []).map(function (m) { return '<button data-chip data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div></div>';
+       lista('MOTIVO_PARADA').map(function (m) { return '<button data-chip data-v="' + esc(m) + '">' + esc(m) + '</button>'; }).join('') + '</div></div>';
   abrirFolha(h + BOTOES, {
     validar: function () {
       var t = $('cTipo').querySelector('.sel');
@@ -532,7 +556,7 @@ function folhaMenu() {
       if (m === 'cad') { toast((await baixarCadastro()) ? 'Listas atualizadas' : 'Sem sinal ou sem configuração'); }
       if (m === 'trocar') {
         if (viagem) { toast('Conclua a viagem antes de trocar de motorista'); return; }
-        delete perfil.motorista; gravar('tmv_perfil', perfil);
+        delete perfil.motorista; delete perfil.filial; gravar('tmv_perfil', perfil);
       }
       fecharFolha(); render();
     }
@@ -543,7 +567,9 @@ function folhaMenu() {
 $('tela').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-acao]'); if (!b) return;
   var a = b.dataset.acao;
-  if (a === 'perfil') { perfil.motorista = b.dataset.v; gravar('tmv_perfil', perfil); render(); }
+  if (a === 'filial') { perfil.filial = b.dataset.v; gravar('tmv_perfil', perfil); render(); }
+  if (a === 'trocarFilial') { delete perfil.filial; gravar('tmv_perfil', perfil); render(); }
+  if (a === 'perfil') { perfil.motorista = b.dataset.v; if (!perfil.filial) perfil.filial = filialAtual(); gravar('tmv_perfil', perfil); render(); }
   if (a === 'perfilLivre') { var n = $('nomeLivre').value.trim(); if (n.length < 3) return toast('Digite o nome completo'); perfil.motorista = n; gravar('tmv_perfil', perfil); render(); }
   if (a === 'passo') folhaPasso(b.dataset.ev);
   if (a === 'iniParada') folhaIniParada();
